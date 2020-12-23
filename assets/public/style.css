@@ -1,12 +1,4 @@
-body {
-  font-family: sans-serif;
-  margin: 20px
-}
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
-.navbar {
-  display: flex;
-}
-
-.navbar > *:not(:last-child) { margin-right: 20px; }
-
-.page { margin-top: 20px; }

@@ -58,12 +58,14 @@ async fn main() {
         .and(warp::post())
         .and(warp::multipart::form().max_length(5_000_000))
         .and_then(upload);
+    let view_uploads_route = warp::path(uploads_dir).and(warp::fs::dir("uploads"));
 
     // Static stuff
     let assets = warp::path("public").and(warp::fs::dir("assets/public/dist"));
     let index = warp::fs::file("assets/public/dist/index.html");
 
     let routes = upload_route
+        .or(view_uploads_route)
         .or(chat)
         .or(assets)
         .or(index)

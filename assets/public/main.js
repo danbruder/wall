@@ -12,34 +12,26 @@ if (isProduction) {
 var socket;
 
 app.ports.sendMessage.subscribe(function(message) {
-  console.log('send', message)
-  socket.send(message);
+  socket.send(JSON.stringify(message));
 });
 
 function initSocket() { 
   var ws = new WebSocket(uri);
 
   ws.onopen = function() {
-    console.log('open')
     app.ports.connected.send(true);
   };
 
   ws.onmessage = function(msg) {
-    console.log('recv', msg)
     app.ports.messageReceiver.send(msg.data);
   };
 
   ws.onclose = function () { 
     app.ports.disconnected.send(true);
 
-    console.log('Socket is closed. Reconnect will be attempted in 1 second.');
     setTimeout(function() {
       socket = initSocket()
     }, 60000);
-  }
-
-  ws.onerror=function(event){
-    console.log("Error");
   }
 
   return ws

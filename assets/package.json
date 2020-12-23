@@ -6,7 +6,7 @@
     "start": "npm install && npm run build:dev && npm run build:css && npm run dev",
     "test": "elm-test",
     "test:watch": "elm-test --watch",
-    "build": "run-s build:elm-spa build:elm build:css:prod build:copy",
+    "build": "NODE_ENV=dev run-s build:elm-spa build:elm build:css:prod build:copy",
     "build:dev": "run-s build:elm-spa build:dev:elm",
     "dev": "run-p dev:elm-spa dev:elm",
     "build:elm": "elm make src/Main.elm --optimize --output=public/dist/elm.compiled.js",

@@ -35,7 +35,7 @@ function initSocket() {
     console.log('Socket is closed. Reconnect will be attempted in 1 second.');
     setTimeout(function() {
       socket = initSocket()
-    }, 1000);
+    }, 60000);
   }
 
   ws.onerror=function(event){

@@ -54,12 +54,13 @@ async fn main() {
             ws.on_upgrade(move |socket| user_connected(socket, users))
         });
 
+    let assets = warp::path("public").and(warp::fs::dir("assets/public/dist"));
+    let index = warp::fs::file("assets/public/dist/index.html");
     let upload_route = warp::path("upload")
         .and(warp::post())
         .and(warp::multipart::form().max_length(5_000_000))
         .and_then(upload);
-    let assets = warp::path("public").and(warp::fs::dir("assets/public/dist"));
-    let index = warp::fs::file("assets/public/dist/index.html");
+
     let routes = upload_route
         .or(chat)
         .or(assets)
@@ -122,13 +123,15 @@ async fn user_disconnected(my_id: usize, users: &Users) {
 }
 
 async fn upload(form: FormData) -> Result<impl Reply, Rejection> {
+    eprintln!("Upload started");
     let parts: Vec<Part> = form.try_collect().await.map_err(|e| {
         eprintln!("form error: {}", e);
         warp::reject::reject()
     })?;
 
     for p in parts {
-        if p.name() == "file" {
+        dbg!(&p);
+        if p.name() == "files[]" {
             let content_type = p.content_type();
             let file_ending = match content_type {
                 Some(file_type) => match file_type {

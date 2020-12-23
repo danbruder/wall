@@ -1,8 +1,11 @@
 port module Pages.Wall exposing (Model, Msg, Params, page)
 
+import File exposing (File)
+import File.Select as Select
 import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing (..)
+import Http
 import Json.Decode as D
 import Spa.Document exposing (Document)
 import Spa.Page as Page exposing (Page)
@@ -52,6 +55,9 @@ init { params } =
 
 type Msg
     = DraftChanged String
+    | UploadedFile (Result Http.Error ())
+    | SelectedFiles File (List File)
+    | ClickedSelectFiles
     | Send
     | Recv String
     | Connected
@@ -98,6 +104,19 @@ update msg model =
         Disconnected ->
             ( { model | connected = False }, Cmd.none )
 
+        ClickedSelectFiles ->
+            ( model, requestImages )
+
+        SelectedFiles file files ->
+            let
+                uploads =
+                    file :: files |> upload
+            in
+            ( model, uploads )
+
+        UploadedFile _ ->
+            ( model, Cmd.none )
+
 
 subscriptions : Model -> Sub Msg
 subscriptions model =
@@ -129,6 +148,7 @@ view model =
                 ]
                 []
             , button [ onClick Send ] [ text "Send" ]
+            , button [ onClick ClickedSelectFiles ] [ text "Upload" ]
             ]
         ]
     }
@@ -161,3 +181,28 @@ port connected : (Bool -> msg) -> Sub msg
 
 
 port disconnected : (Bool -> msg) -> Sub msg
+
+
+
+-- FILE STUFF
+
+
+upload : List File -> Cmd Msg
+upload files =
+    Http.request
+        { method = "POST"
+        , headers = []
+        , url = "/upload"
+        , body =
+            files
+                |> List.map (Http.filePart "files[]")
+                |> Http.multipartBody
+        , expect = Http.expectWhatever UploadedFile
+        , timeout = Nothing
+        , tracker = Nothing
+        }
+
+
+requestImages : Cmd Msg
+requestImages =
+    Select.files [ "image/png", "image/jpg" ] SelectedFiles

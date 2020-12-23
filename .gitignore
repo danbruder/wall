@@ -1,4 +1,5 @@
 /target
+database
 uploads
 .env
 assets/node_modules

@@ -38,6 +38,7 @@ type alias Model =
     , offlineMessages : List String
     , connected : Bool
     , uploadedUrls : List String
+    , users : List String
     }
 
 
@@ -48,6 +49,7 @@ init { params } =
       , connected = False
       , offlineMessages = []
       , uploadedUrls = []
+      , users = []
       }
     , Cmd.none
     )
@@ -71,6 +73,7 @@ type Msg
 type Message
     = ChatMessage String
     | NewUploadMessage (List String)
+    | GotUsers (List String)
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -100,6 +103,11 @@ update msg model =
 
         GotMessage (Just (NewUploadMessage uploads)) ->
             ( { model | uploadedUrls = model.uploadedUrls ++ uploads }
+            , Cmd.none
+            )
+
+        GotMessage (Just (GotUsers userIds)) ->
+            ( { model | users = userIds }
             , Cmd.none
             )
 
@@ -147,6 +155,7 @@ decodeMessage message =
             JD.oneOf
                 [ JD.map (ChatMessage >> Just) JD.string
                 , JD.map (NewUploadMessage >> Just) (JD.field "uploaded" (JD.list JD.string))
+                , JD.map (GotUsers >> Just) (JD.field "users" (JD.list JD.string))
                 , JD.succeed Nothing
                 ]
     in
@@ -168,6 +177,7 @@ view model =
     , body =
         [ div [ class "p-12" ]
             [ h1 [ class "text-xl" ] [ text "Photo wall of greatness" ]
+            , div [] [ text ("Current users: " ++ (model.users |> List.length |> String.fromInt)) ]
             , div [ class "flex justify-center my-12" ]
                 [ button [ class "inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-yellow-600 hover:bg-yellow-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-yellow-500", onClick ClickedSelectFiles ] [ text "Upload" ]
                 ]

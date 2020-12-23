@@ -1,0 +1,19 @@
+{
+  "name": "wall",
+  "version": "1.0.0",
+  "description": "Minimal chat app with elmspa and warp using websockets",
+  "main": "index.js",
+  "scripts": {
+    "build": "cd assets && npm run build"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/danbruder/wall.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/danbruder/wall/issues"
+  },
+  "homepage": "https://github.com/danbruder/wall#readme"
+}

@@ -1,4 +1,5 @@
-# Wall
+# Photo Wall
 
-Minimal chat app with elmspa and warp using websockets
+Photo wall with chat using Elm, Rust/Warp, tailwind, and sled:  [https://safe-wildwood-44132.herokuapp.com](https://safe-wildwood-44132.herokuapp.com/)
 
+Messy, but it works! 

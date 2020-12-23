@@ -10,27 +10,36 @@ if (isProduction) {
   uri = 'wss://' + window.location.host + '/chat'
 }
 
-// Create your WebSocket.
-var socket = new WebSocket(uri);
+var socket;
 
 app.ports.sendMessage.subscribe(function(message) {
   console.log('send', message)
   socket.send(message);
 });
 
+function initSocket() { 
+  var ws = new WebSocket(uri);
 
-socket.onopen = function() {
-  console.log('open')
-  app.ports.connected.send(true);
-};
+  ws.onopen = function() {
+    console.log('open')
+    app.ports.connected.send(true);
+  };
 
-socket.onmessage = function(msg) {
-  console.log('recv', msg)
-  app.ports.messageReceiver.send(msg.data);
-};
+  ws.onmessage = function(msg) {
+    console.log('recv', msg)
+    app.ports.messageReceiver.send(msg.data);
+  };
 
-socket.onclose = function() {
-  console.log('close')
-  app.ports.disconnected.send(true);
-};
+  ws.onclose = function() {
+    app.ports.disconnected.send(true);
 
+    console.log('Socket is closed. Reconnect will be attempted in 1 second.');
+    setTimeout(function() {
+      socket = initSocket()
+    }, 1000);
+  };
+
+  return ws
+}
+
+socket = initSocket()

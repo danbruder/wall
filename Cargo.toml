@@ -7,6 +7,8 @@ edition = "2018"
 [dependencies]
 warp = "0.2.5"
 tokio = { version = "0.2", features = ["full"] }
-futures = { version = "0.3", default-features = false, features = ["alloc"] }
+futures = { version = "=0.3.5", default-features = false, features = ["alloc"] }
 pretty_env_logger = "0.4.0"
 dotenv = "0.15.0"
+uuid = { version = "0.8.1", features = ["v4"]}
+bytes = "0.5.6"

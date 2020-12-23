@@ -29,14 +29,18 @@ function initSocket() {
     app.ports.messageReceiver.send(msg.data);
   };
 
-  ws.onclose = function() {
+  ws.onclose = function () { 
     app.ports.disconnected.send(true);
 
     console.log('Socket is closed. Reconnect will be attempted in 1 second.');
     setTimeout(function() {
       socket = initSocket()
     }, 1000);
-  };
+  }
+
+  ws.onerror=function(event){
+    console.log("Error");
+  }
 
   return ws
 }

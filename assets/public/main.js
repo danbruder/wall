@@ -31,7 +31,7 @@ function initSocket() {
 
     setTimeout(function() {
       socket = initSocket()
-    }, 60000);
+    }, 3000);
   }
 
   return ws

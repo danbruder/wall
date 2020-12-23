@@ -39,9 +39,10 @@ async fn main() {
             ws.on_upgrade(move |socket| user_connected(socket, users))
         });
 
-    let assets = warp::path::end().and(warp::fs::dir("assets/public"));
+    let assets = warp::path("public").and(warp::fs::dir("assets/public"));
+    let index = warp::fs::file("assets/public/index.html");
 
-    let routes = chat.or(assets);
+    let routes = chat.or(assets).or(index);
 
     warp::serve(routes).run(([127, 0, 0, 1], 3030)).await;
 }

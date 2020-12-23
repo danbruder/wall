@@ -9,3 +9,4 @@ warp = "0.2.5"
 tokio = { version = "0.2", features = ["full"] }
 futures = { version = "0.3", default-features = false, features = ["alloc"] }
 pretty_env_logger = "0.4.0"
+dotenv = "0.15.0"

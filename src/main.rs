@@ -1,5 +1,6 @@
 // #![deny(warnings)]
 use std::collections::HashMap;
+use std::env;
 use std::sync::{
     atomic::{AtomicUsize, Ordering},
     Arc,
@@ -23,6 +24,12 @@ type Users = Arc<RwLock<HashMap<usize, mpsc::UnboundedSender<Result<Message, war
 async fn main() {
     pretty_env_logger::init();
 
+    dotenv::dotenv().ok();
+
+    let port = env::var("PORT")
+        .map(|p| p.parse().unwrap_or(3030))
+        .unwrap_or(3030);
+
     // Keep track of all connected users, key is usize, value
     // is a websocket sender.
     let users = Users::default();
@@ -44,7 +51,7 @@ async fn main() {
 
     let routes = chat.or(assets).or(index);
 
-    warp::serve(routes).run(([127, 0, 0, 1], 3030)).await;
+    warp::serve(routes).run(([0, 0, 0, 0], port)).await;
 }
 
 async fn user_connected(ws: WebSocket, users: Users) {

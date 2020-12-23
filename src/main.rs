@@ -7,6 +7,8 @@ use serde_json::json;
 use std::collections::HashMap;
 use std::convert::Infallible;
 use std::env;
+use std::fs::create_dir;
+use std::path::Path;
 use std::sync::{
     atomic::{AtomicUsize, Ordering},
     Arc,
@@ -33,6 +35,10 @@ type Users = Arc<RwLock<HashMap<usize, mpsc::UnboundedSender<Result<Message, war
 async fn main() {
     pretty_env_logger::init();
 
+    let uploads_dir = "uploads";
+    if !Path::new(uploads_dir).is_dir() {
+        create_dir(uploads_dir).expect("Could not create uploads dir");
+    }
     dotenv::dotenv().ok();
 
     let port = env::var("PORT")

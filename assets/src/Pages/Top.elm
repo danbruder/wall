@@ -47,11 +47,7 @@ init { params } =
       , messages = []
       , connected = False
       , offlineMessages = []
-      , uploadedUrls =
-            [--   "/uploads/1470e96d-b48f-447a-a58d-777762b157db.jpeg"
-             -- , "/uploads/1470e96d-b48f-447a-a58d-777762b157db.jpeg"
-             -- , "/uploads/1470e96d-b48f-447a-a58d-777762b157db.jpeg"
-            ]
+      , uploadedUrls = []
       }
     , Cmd.none
     )

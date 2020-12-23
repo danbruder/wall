@@ -12,10 +12,6 @@ view config =
 
 
 viewPhoto url =
-    -- let
-    --     myUrl =
-    --         "http://localhost:3030" ++ url
-    -- in
     div [ class "p-2" ]
         [ img [ src url, class "rounded-lg shadow-lg md:w-64" ] []
         ]

@@ -48,9 +48,9 @@ init { params } =
       , connected = False
       , offlineMessages = []
       , uploadedUrls =
-            [ "/uploads/1470e96d-b48f-447a-a58d-777762b157db.jpeg"
-            , "/uploads/1470e96d-b48f-447a-a58d-777762b157db.jpeg"
-            , "/uploads/1470e96d-b48f-447a-a58d-777762b157db.jpeg"
+            [--   "/uploads/1470e96d-b48f-447a-a58d-777762b157db.jpeg"
+             -- , "/uploads/1470e96d-b48f-447a-a58d-777762b157db.jpeg"
+             -- , "/uploads/1470e96d-b48f-447a-a58d-777762b157db.jpeg"
             ]
       }
     , Cmd.none
@@ -172,16 +172,20 @@ view model =
     , body =
         [ div [ class "p-12" ]
             [ h1 [ class "text-xl" ] [ text "Photo wall of greatness" ]
-            , Chat.view
-                { handleSubmit = Send
-                , handleInput = DraftChanged
-                , messages = model.messages
-                , draft = model.draft
-                }
-            , button [ onClick ClickedSelectFiles ] [ text "Upload" ]
+            , div [ class "flex justify-center my-12" ]
+                [ button [ class "inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-yellow-600 hover:bg-yellow-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-yellow-500", onClick ClickedSelectFiles ] [ text "Upload" ]
+                ]
             , Gallery.view
                 { urls = model.uploadedUrls
                 }
+            , div [ class "mt-12" ]
+                [ Chat.view
+                    { handleSubmit = Send
+                    , handleInput = DraftChanged
+                    , messages = model.messages
+                    , draft = model.draft
+                    }
+                ]
             ]
         ]
     }

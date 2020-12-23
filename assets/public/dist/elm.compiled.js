@@ -6362,14 +6362,7 @@ var $author$project$Spa$Page$element = function (page) {
 var $author$project$Pages$Top$init = function (_v0) {
 	var params = _v0.bX;
 	return _Utils_Tuple2(
-		{
-			P: false,
-			br: '',
-			bG: _List_Nil,
-			J: _List_Nil,
-			Z: _List_fromArray(
-				['/uploads/1470e96d-b48f-447a-a58d-777762b157db.jpeg', '/uploads/1470e96d-b48f-447a-a58d-777762b157db.jpeg', '/uploads/1470e96d-b48f-447a-a58d-777762b157db.jpeg'])
-		},
+		{P: false, br: '', bG: _List_Nil, J: _List_Nil, Z: _List_Nil},
 		$elm$core$Platform$Cmd$none);
 };
 var $author$project$Pages$Top$Connected = {$: 6};
@@ -7181,7 +7174,7 @@ var $author$project$Components$Chat$view = function (config) {
 																	]),
 																_List_fromArray(
 																	[
-																		$elm$html$Html$text('Comment                      ')
+																		$elm$html$Html$text('Send')
 																	]))
 															]))
 													]))
@@ -7254,20 +7247,39 @@ var $author$project$Pages$Top$view = function (model) {
 							[
 								$elm$html$Html$text('Photo wall of greatness')
 							])),
-						$author$project$Components$Chat$view(
-						{br: model.br, bz: $author$project$Pages$Top$DraftChanged, bA: $author$project$Pages$Top$Send, bG: model.bG}),
 						A2(
-						$elm$html$Html$button,
+						$elm$html$Html$div,
 						_List_fromArray(
 							[
-								$elm$html$Html$Events$onClick($author$project$Pages$Top$ClickedSelectFiles)
+								$elm$html$Html$Attributes$class('flex justify-center my-12')
 							]),
 						_List_fromArray(
 							[
-								$elm$html$Html$text('Upload')
+								A2(
+								$elm$html$Html$button,
+								_List_fromArray(
+									[
+										$elm$html$Html$Attributes$class('inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-yellow-600 hover:bg-yellow-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-yellow-500'),
+										$elm$html$Html$Events$onClick($author$project$Pages$Top$ClickedSelectFiles)
+									]),
+								_List_fromArray(
+									[
+										$elm$html$Html$text('Upload')
+									]))
 							])),
 						$author$project$Components$Gallery$view(
-						{cc: model.Z})
+						{cc: model.Z}),
+						A2(
+						$elm$html$Html$div,
+						_List_fromArray(
+							[
+								$elm$html$Html$Attributes$class('mt-12')
+							]),
+						_List_fromArray(
+							[
+								$author$project$Components$Chat$view(
+								{br: model.br, bz: $author$project$Pages$Top$DraftChanged, bA: $author$project$Pages$Top$Send, bG: model.bG})
+							]))
 					]))
 			]),
 		b7: 'Wall'

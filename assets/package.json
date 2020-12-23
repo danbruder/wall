@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "A project created with elm-spa",
   "scripts": {
-    "start": "npm install && npm run build:dev && npm run dev",
+    "start": "npm install && npm run build:dev && npm run build:css && npm run dev",
     "test": "elm-test",
     "test:watch": "elm-test --watch",
     "build": "run-s build:elm-spa build:elm build:css:prod build:copy",

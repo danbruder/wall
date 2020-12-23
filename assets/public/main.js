@@ -1,9 +1,29 @@
-// Initial data passed to Elm (should match `Flags` defined in `Shared.elm`)
-// https://guide.elm-lang.org/interop/flags.html
 var flags = null
 
-// Start our Elm application
 var app = Elm.Main.init({ flags: flags })
 
-// Ports go here
-// https://guide.elm-lang.org/interop/ports.html
+// Create your WebSocket.
+const uri = 'ws://localhost:3030/chat';
+var socket = new WebSocket(uri);
+
+app.ports.sendMessage.subscribe(function(message) {
+  console.log('send', message)
+  socket.send(message);
+});
+
+
+socket.onopen = function() {
+  console.log('open')
+  app.ports.connected.send(true);
+};
+
+socket.onmessage = function(msg) {
+  console.log('recv', msg)
+  app.ports.messageReceiver.send(msg.data);
+};
+
+socket.onclose = function() {
+  console.log('close')
+  app.ports.disconnected.send(true);
+};
+

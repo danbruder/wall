@@ -39,10 +39,9 @@ async fn main() {
             ws.on_upgrade(move |socket| user_connected(socket, users))
         });
 
-    // GET / -> index html
-    let index = warp::path::end().map(|| warp::reply::html(INDEX_HTML));
+    let assets = warp::path::end().and(warp::fs::dir("assets/public"));
 
-    let routes = index.or(chat);
+    let routes = chat.or(assets);
 
     warp::serve(routes).run(([127, 0, 0, 1], 3030)).await;
 }
@@ -103,13 +102,11 @@ async fn user_message(my_id: usize, msg: Message, users: &Users) {
     let new_msg = format!("<User#{}>: {}", my_id, msg);
 
     // New message from this user, send it to everyone else (except same uid)...
-    for (&uid, tx) in users.read().await.iter() {
-        if my_id != uid {
-            if let Err(_disconnected) = tx.send(Ok(Message::text(new_msg.clone()))) {
-                // The tx is disconnected, our `user_disconnected` code
-                // should be happening in another task, nothing more to
-                // do here.
-            }
+    for (_uid, tx) in users.read().await.iter() {
+        if let Err(_disconnected) = tx.send(Ok(Message::text(new_msg.clone()))) {
+            // The tx is disconnected, our `user_disconnected` code
+            // should be happening in another task, nothing more to
+            // do here.
         }
     }
 }
@@ -120,51 +117,3 @@ async fn user_disconnected(my_id: usize, users: &Users) {
     // Stream closed up, so remove from the user list
     users.write().await.remove(&my_id);
 }
-
-static INDEX_HTML: &str = r#"<!DOCTYPE html>
-<html lang="en">
-    <head>
-        <title>Warp Chat</title>
-    </head>
-    <body>
-        <h1>Warp chat</h1>
-        <div id="chat">
-            <p><em>Connecting...</em></p>
-        </div>
-        <input type="text" id="text" />
-        <button type="button" id="send">Send</button>
-        <script type="text/javascript">
-        const chat = document.getElementById('chat');
-        const text = document.getElementById('text');
-        const uri = 'ws://' + location.host + '/chat';
-        const ws = new WebSocket(uri);
-
-        function message(data) {
-            const line = document.createElement('p');
-            line.innerText = data;
-            chat.appendChild(line);
-        }
-
-        ws.onopen = function() {
-            chat.innerHTML = '<p><em>Connected!</em></p>';
-        };
-
-        ws.onmessage = function(msg) {
-            message(msg.data);
-        };
-
-        ws.onclose = function() {
-            chat.getElementsByTagName('em')[0].innerText = 'Disconnected!';
-        };
-
-        send.onclick = function() {
-            const msg = text.value;
-            ws.send(msg);
-            text.value = '';
-
-            message('<You>: ' + msg);
-        };
-        </script>
-    </body>
-</html>
-"#;

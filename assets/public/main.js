@@ -2,7 +2,6 @@ var flags = null
 
 var app = Elm.Main.init({ flags: flags })
 
-
 const isProduction = window.location.protocol == "https:"
  
 var uri = 'ws://localhost:3030/chat';

@@ -30,13 +30,20 @@ type alias Params =
 type alias Model =
     { draft : String
     , messages : List String
+    , offlineMessages : List String
     , connected : Bool
     }
 
 
 init : Url Params -> ( Model, Cmd Msg )
 init { params } =
-    ( { draft = "", messages = [], connected = False }, Cmd.none )
+    ( { draft = ""
+      , messages = []
+      , connected = False
+      , offlineMessages = []
+      }
+    , Cmd.none
+    )
 
 
 
@@ -47,8 +54,8 @@ type Msg
     = DraftChanged String
     | Send
     | Recv String
-    | Connected Bool
-    | Disconnected Bool
+    | Connected
+    | Disconnected
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -60,19 +67,35 @@ update msg model =
             )
 
         Send ->
-            ( { model | draft = "" }
-            , sendMessage model.draft
-            )
+            if model.connected then
+                ( { model | draft = "" }, sendMessage model.draft )
+
+            else
+                ( { model
+                    | offlineMessages = model.offlineMessages ++ [ model.draft ]
+                    , draft = ""
+                  }
+                , Cmd.none
+                )
 
         Recv message ->
             ( { model | messages = model.messages ++ [ message ] }
             , Cmd.none
             )
 
-        Connected _ ->
-            ( { model | connected = True }, Cmd.none )
+        Connected ->
+            let
+                cmds =
+                    model.offlineMessages |> List.map sendMessage
+            in
+            ( { model
+                | connected = True
+                , offlineMessages = []
+              }
+            , Cmd.batch cmds
+            )
 
-        Disconnected _ ->
+        Disconnected ->
             ( { model | connected = False }, Cmd.none )
 
 
@@ -80,8 +103,8 @@ subscriptions : Model -> Sub Msg
 subscriptions model =
     Sub.batch
         [ messageReceiver Recv
-        , connected Connected
-        , disconnected Disconnected
+        , connected (\_ -> Connected)
+        , disconnected (\_ -> Disconnected)
         ]
 
 

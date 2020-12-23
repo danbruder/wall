@@ -1,8 +1,9 @@
 // #![deny(warnings)]
 use bytes::{BufMut, BytesMut};
 
+use futures::StreamExt;
 use futures::TryStreamExt;
-use futures::{FutureExt, StreamExt};
+use serde_json::json;
 use std::collections::HashMap;
 use std::convert::Infallible;
 use std::env;
@@ -38,28 +39,23 @@ async fn main() {
         .map(|p| p.parse().unwrap_or(3030))
         .unwrap_or(3030);
 
-    // Keep track of all connected users, key is usize, value
-    // is a websocket sender.
     let users = Users::default();
-    // Turn our "state" into a new Filter...
     let users = warp::any().map(move || users.clone());
 
-    // GET /chat -> websocket upgrade
     let chat = warp::path("chat")
-        // The `ws()` filter will prepare Websocket handshake...
         .and(warp::ws())
-        .and(users)
-        .map(|ws: warp::ws::Ws, users| {
-            // This will call our function if the handshake succeeds.
-            ws.on_upgrade(move |socket| user_connected(socket, users))
-        });
+        .and(users.clone())
+        .map(|ws: warp::ws::Ws, users| ws.on_upgrade(move |socket| user_connected(socket, users)));
 
-    let assets = warp::path("public").and(warp::fs::dir("assets/public/dist"));
-    let index = warp::fs::file("assets/public/dist/index.html");
     let upload_route = warp::path("upload")
+        .and(users)
         .and(warp::post())
         .and(warp::multipart::form().max_length(5_000_000))
         .and_then(upload);
+
+    // Static stuff
+    let assets = warp::path("public").and(warp::fs::dir("assets/public/dist"));
+    let index = warp::fs::file("assets/public/dist/index.html");
 
     let routes = upload_route
         .or(chat)
@@ -71,66 +67,34 @@ async fn main() {
 }
 
 async fn user_connected(ws: WebSocket, users: Users) {
-    // Use a counter to assign a new unique ID for this user.
     let my_id = NEXT_USER_ID.fetch_add(1, Ordering::Relaxed);
-
-    eprintln!("new chat user: {}", my_id);
-
-    // Split the socket into a sender and receive of messages.
     let (user_ws_tx, mut user_ws_rx) = ws.split();
-
     let (tx, rx) = mpsc::unbounded_channel();
-    tokio::task::spawn(rx.forward(user_ws_tx).map(|result| {
-        if let Err(e) = result {
-            eprintln!("websocket send error: {}", e);
-        }
-    }));
 
+    tokio::task::spawn(rx.forward(user_ws_tx));
+
+    // Save id and send end
     users.write().await.insert(my_id, tx);
-    let users2 = users.clone();
 
-    while let Some(result) = user_ws_rx.next().await {
-        let msg = match result {
-            Ok(msg) => msg,
-            Err(e) => {
-                eprintln!("websocket error(uid={}): {}", my_id, e);
-                break;
-            }
-        };
-        user_message(my_id, msg, &users).await;
+    // Receive messages
+    while let Some(Ok(msg)) = user_ws_rx.next().await {
+        broadcast(&users, msg).await
     }
 
-    user_disconnected(my_id, &users2).await;
-}
-
-async fn user_message(my_id: usize, msg: Message, users: &Users) {
-    let msg = if let Ok(s) = msg.to_str() {
-        s
-    } else {
-        return;
-    };
-
-    let new_msg = format!("<User#{}>: {}", my_id, msg);
-
-    // New message from this user, send it to everyone else (except same uid)...
-    for (_uid, tx) in users.read().await.iter() {
-        if let Err(_disconnected) = tx.send(Ok(Message::text(new_msg.clone()))) {}
-    }
-}
-
-async fn user_disconnected(my_id: usize, users: &Users) {
+    // If we are out of the loop remove this client
     users.write().await.remove(&my_id);
 }
 
-async fn upload(form: FormData) -> Result<impl Reply, Rejection> {
-    eprintln!("Upload started");
-    let parts: Vec<Part> = form.try_collect().await.map_err(|e| {
-        eprintln!("form error: {}", e);
-        warp::reject::reject()
-    })?;
+/// Upload handler
+async fn upload(users: Users, form: FormData) -> Result<impl Reply, Rejection> {
+    let parts: Vec<Part> = form
+        .try_collect()
+        .await
+        .map_err(|_| warp::reject::reject())?;
+
+    let mut urls = vec![];
 
     for p in parts {
-        dbg!(&p);
         if p.name() == "files[]" {
             let content_type = p.content_type();
             let file_ending = match content_type {
@@ -138,13 +102,11 @@ async fn upload(form: FormData) -> Result<impl Reply, Rejection> {
                     "image/png" => "png",
                     "image/jpeg" => "jpeg",
                     "image/jpg" => "jpg",
-                    v => {
-                        eprintln!("invalid file type found: {}", v);
+                    _ => {
                         return Err(warp::reject::reject());
                     }
                 },
                 None => {
-                    eprintln!("file type could not be determined");
                     return Err(warp::reject::reject());
                 }
             };
@@ -156,19 +118,22 @@ async fn upload(form: FormData) -> Result<impl Reply, Rejection> {
                     async move { Ok(vec) }
                 })
                 .await
-                .map_err(|e| {
-                    eprintln!("reading file error: {}", e);
-                    warp::reject::reject()
-                })?;
+                .map_err(|_| warp::reject::reject())?;
 
-            let file_name = format!("./files/{}.{}", Uuid::new_v4().to_string(), file_ending);
-            tokio::fs::write(&file_name, value).await.map_err(|e| {
-                eprint!("error writing file: {}", e);
-                warp::reject::reject()
-            })?;
-            println!("created file: {}", file_name);
+            let file_name = format!("{}.{}", Uuid::new_v4().to_string(), file_ending);
+            let path = format!("./uploads/{}", file_name);
+            let url = format!("/uploads/{}", file_name);
+            urls.push(url);
+
+            tokio::fs::write(&path, value)
+                .await
+                .map_err(|_| warp::reject::reject())?;
         }
     }
+
+    let value = json!({ "uploaded": urls });
+    let msg = serde_json::to_string(&value).unwrap();
+    broadcast(&users, Message::text(msg)).await;
 
     Ok("success")
 }
@@ -187,4 +152,10 @@ async fn handle_rejection(err: Rejection) -> std::result::Result<impl Reply, Inf
     };
 
     Ok(warp::reply::with_status(message, code))
+}
+
+async fn broadcast(users: &Users, msg: Message) {
+    for (_, tx) in users.read().await.iter() {
+        let _ = tx.send(Ok(msg.clone()));
+    }
 }

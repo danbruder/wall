@@ -2,8 +2,15 @@ var flags = null
 
 var app = Elm.Main.init({ flags: flags })
 
+
+const isProduction = window.location.protocol == "https"
+var uri = 'ws://localhost:3030/chat';
+
+if (isProduction ) { 
+  uri = 'wss://' + window.location.host + '/chat'
+}
+
 // Create your WebSocket.
-const uri = 'ws://localhost:3030/chat';
 var socket = new WebSocket(uri);
 
 app.ports.sendMessage.subscribe(function(message) {

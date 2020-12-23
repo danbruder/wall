@@ -4,7 +4,7 @@
   "description": "Minimal chat app with elmspa and warp using websockets",
   "main": "index.js",
   "scripts": {
-    "build": "cd assets && npm run build"
+    "build": "cd assets && npm install && npm run build"
   },
   "repository": {
     "type": "git",

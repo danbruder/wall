@@ -51,7 +51,7 @@ init { params } =
       , uploadedUrls = []
       , users = []
       }
-    , Cmd.none
+    , getExisting
     )
 
 
@@ -66,6 +66,7 @@ type Msg
     | ClickedSelectFiles
     | Send
     | GotMessage (Maybe Message)
+    | GotExistingMessages (Result Http.Error (List (Maybe Message)))
     | Connected
     | Disconnected
 
@@ -96,23 +97,20 @@ update msg model =
                 , Cmd.none
                 )
 
-        GotMessage (Just (ChatMessage message)) ->
-            ( { model | messages = model.messages ++ [ message ] }
-            , Cmd.none
-            )
+        GotExistingMessages response ->
+            case response of
+                Ok messages ->
+                    ( messages
+                        |> List.filterMap dropUserMsgs
+                        |> List.foldl (\item acc -> handleMessage item acc) model
+                    , Cmd.none
+                    )
 
-        GotMessage (Just (NewUploadMessage uploads)) ->
-            ( { model | uploadedUrls = model.uploadedUrls ++ uploads }
-            , Cmd.none
-            )
+                Err err ->
+                    ( model, Cmd.none )
 
-        GotMessage (Just (GotUsers userIds)) ->
-            ( { model | users = userIds }
-            , Cmd.none
-            )
-
-        GotMessage Nothing ->
-            ( model, Cmd.none )
+        GotMessage message ->
+            ( handleMessage message model, Cmd.none )
 
         Connected ->
             let
@@ -139,32 +137,66 @@ update msg model =
             ( model, Cmd.none )
 
 
+handleMessage message model =
+    case message of
+        Just (ChatMessage msg) ->
+            { model | messages = model.messages ++ [ msg ] }
+
+        Just (NewUploadMessage uploads) ->
+            { model | uploadedUrls = model.uploadedUrls ++ uploads }
+
+        Just (GotUsers userIds) ->
+            { model | users = userIds }
+
+        Nothing ->
+            model
+
+
+dropUserMsgs message =
+    case message of
+        Just (GotUsers _) ->
+            Nothing
+
+        msg ->
+            Just msg
+
+
 subscriptions : Model -> Sub Msg
 subscriptions _ =
     Sub.batch
-        [ messageReceiver decodeMessage
+        [ messageReceiver decodeMessagePayload
         , connected (\_ -> Connected)
         , disconnected (\_ -> Disconnected)
         ]
 
 
-decodeMessage : String -> Msg
-decodeMessage message =
-    let
-        decoder =
-            JD.oneOf
-                [ JD.map (ChatMessage >> Just) JD.string
-                , JD.map (NewUploadMessage >> Just) (JD.field "uploaded" (JD.list JD.string))
-                , JD.map (GotUsers >> Just) (JD.field "users" (JD.list JD.string))
-                , JD.succeed Nothing
-                ]
-    in
-    case JD.decodeString decoder message of
+decodeMessage =
+    JD.oneOf
+        [ JD.map (ChatMessage >> Just) JD.string
+        , JD.map (NewUploadMessage >> Just) (JD.field "uploaded" (JD.list JD.string))
+        , JD.map (GotUsers >> Just) (JD.field "users" (JD.list JD.string))
+        , JD.succeed Nothing
+        ]
+
+
+decodeMessagePayload : String -> Msg
+decodeMessagePayload message =
+    case JD.decodeString decodeMessage message of
         Ok m ->
             GotMessage m
 
-        Err _ ->
+        Err err ->
             GotMessage Nothing
+
+
+decodeMessagePayloadAgainLol : String -> Maybe Message
+decodeMessagePayloadAgainLol message =
+    case JD.decodeString decodeMessage message of
+        Ok m ->
+            m
+
+        Err err ->
+            Nothing
 
 
 
@@ -230,6 +262,22 @@ upload files =
         , expect = Http.expectWhatever UploadedFile
         , timeout = Nothing
         , tracker = Nothing
+        }
+
+
+getExisting : Cmd Msg
+getExisting =
+    Http.get
+        { url = "/messages"
+        , expect =
+            Http.expectJson GotExistingMessages
+                (JD.field "existing_messages"
+                    (JD.list
+                        (JD.string
+                            |> JD.andThen (decodeMessagePayloadAgainLol >> JD.succeed)
+                        )
+                    )
+                )
         }
 
 

@@ -57,6 +57,22 @@ async fn main() {
         .and(warp::post())
         .and(warp::multipart::form().max_length(5_000_000))
         .and_then(upload);
+
+    let existing_messages = warp::path("messages")
+        .and(store.clone())
+        .and(warp::get())
+        .map(|store: Store| {
+            // Set up bucket for room messages
+            let bucket = store.bucket::<String, String>(Some("messages")).unwrap();
+            // Send existing messages to user
+            let mut values = vec![];
+            for item in bucket.iter() {
+                let item = item.unwrap();
+                values.push(item.value::<String>().unwrap());
+            }
+
+            warp::reply::json(&json!({ "existing_messages": values }))
+        });
     let view_uploads_route = warp::path(uploads_dir).and(warp::fs::dir("uploads"));
 
     // Static stuff
@@ -65,6 +81,7 @@ async fn main() {
 
     let routes = upload_route
         .or(view_uploads_route)
+        .or(existing_messages)
         .or(chat)
         .or(assets)
         .or(index)
@@ -95,14 +112,6 @@ async fn user_connected(ws: WebSocket, users: ConnectedUsers, store: Store) {
 
     // Set up bucket for room messages
     let bucket = store.bucket::<String, String>(Some("messages")).unwrap();
-
-    // Send existing messages to user
-    for item in bucket.iter() {
-        let item = item.unwrap();
-        let value = item.value::<String>().unwrap();
-        let msg = Message::text(value);
-        let _ = tx.send(Ok(msg));
-    }
 
     // Receive messages
     while let Some(Ok(msg)) = user_ws_rx.next().await {
